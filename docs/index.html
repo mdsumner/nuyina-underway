@@ -5,17 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nuyina underway</title>
 <style>
-body { font-family: system-ui, sans-serif; max-width: 40em; margin: 2em auto; padding: 0 1em; line-height: 1.5; }
-li { margin-bottom: 0.8em; }
+:root { --bg: #f7f6f2; --fg: #1d2b36; --muted: #5b6b77; --card: #ffffff; --line: #d9dde0; --accent: #c8102e; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #10171d; --fg: #e6ecef; --muted: #9aa9b3; --card: #18222a; --line: #2a3742; --accent: #ff5a6e; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; line-height: 1.5; }
+main { max-width: 52em; margin: 0 auto; padding: 2.5em 1em 3em; }
+h1 { margin: 0 0 0.2em; font-size: 2em; letter-spacing: -0.01em; }
+.lede { color: var(--muted); margin: 0 0 2em; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15em, 1fr)); gap: 1em; }
+.card { background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 6px; padding: 1em 1.1em; }
+.card h2 { margin: 0 0 0.3em; font-size: 1.1em; }
+.card p { margin: 0 0 0.6em; color: var(--muted); font-size: 0.95em; }
+.card .src { font-size: 0.85em; }
+a { color: var(--accent); }
+footer { margin-top: 2.5em; padding-top: 1em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85em; }
 </style>
 </head>
 <body>
+<main>
 <h1>Nuyina underway</h1>
-<p>Sites built on the RSV Nuyina underway feed. The data: <a href="https://github.com/mdsumner/nuyina-underway/releases/tag/v0.0.1">nuyina_underway.parquet</a> (updated by GitHub Actions from the AAD GeoServer WFS).</p>
-<ul>
-<li><a href="proximal/">Proximal</a>: live vessel track with crow-fly lines and distance metrics.</li>
-<li><a href="https://projects.pawsey.org.au/nuyina.map/vessel/nuyina_map.html">Sea ice map</a>: the vessel over daily sea ice, rendered by <a href="https://github.com/mdsumner/seaice.map">seaice.map</a> to Pawsey object storage.</li>
-<li><a href="https://github.com/mdsumner/nuyina.underway">nuyina.underway</a>: R package to read the underway data up to minutes-recent, from the efficient Parquet cache here plus the live WFS for anything newer.</li>
-</ul>
+<p class="lede">Sites and tools built on the RSV Nuyina underway feed: position, met and sea-surface measurements, every minute, from the AAD GeoServer.</p>
+<div class="grid">
+<div class="card">
+<h2><a href="https://geojson.io/#data=data:text/x-url,https%3A%2F%2Fdata.aad.gov.au%2Fgeoserver%2Fows%3Fservice%3DWFS%26version%3D2.0.0%26request%3DGetFeature%26typeName%3Dunderway%253Anuyina_underway%26outputFormat%3Dapplication%252Fjson%26sortBy%3Ddatetime%2BD%26count%3D240">Where's Nuyina now?</a></h2>
+<p>The last few hours of track (240 records), opened on geojson.io straight from the live WFS.</p>
+<p class="src"><a href="https://data.aad.gov.au/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=underway%3Anuyina_underway&amp;outputFormat=application%2Fjson&amp;sortBy=datetime+D&amp;count=240">raw GeoJSON</a></p>
+</div>
+<div class="card">
+<h2><a href="proximal/">Proximal</a></h2>
+<p>Live vessel track with crow-fly lines to a chosen place, and travelled versus geodesic distance.</p>
+<p class="src">from <a href="https://github.com/mdsumner/nuyina-proximal">nuyina-proximal</a> (archived; lives here now)</p>
+</div>
+<div class="card">
+<h2><a href="https://projects.pawsey.org.au/nuyina.map/vessel/nuyina_map.html">Sea ice map</a></h2>
+<p>The vessel over daily sea ice concentration, rendered to Pawsey object storage.</p>
+<p class="src">built by <a href="https://github.com/mdsumner/seaice.map">seaice.map</a></p>
+</div>
+<div class="card">
+<h2><a href="https://github.com/mdsumner/nuyina.underway">nuyina.underway</a></h2>
+<p>R package to read the underway data up to minutes-recent, from the Parquet cache here plus the live WFS for anything newer.</p>
+<p class="src"><code>nuyina.underway::nuyina_underway()</code></p>
+</div>
+</div>
+<footer>
+Data: <a href="https://github.com/mdsumner/nuyina-underway/releases/tag/v0.0.1">nuyina_underway.parquet</a>, refreshed by GitHub Actions in
+<a href="https://github.com/mdsumner/nuyina-underway">mdsumner/nuyina-underway</a>, from the
+<a href="https://data.aad.gov.au/geoserver/ows?service=WFS&amp;request=GetCapabilities">AAD GeoServer WFS</a> (layer underway:nuyina_underway).
+</footer>
+</main>
 </body>
 </html>
