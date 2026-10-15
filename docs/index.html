@@ -92,8 +92,7 @@ tail(d)</code></pre></div>
 d &lt;- arrow::read_parquet(url)</code></pre></div>
 
 <div class="snip"><h3>Python</h3>
-<pre><code>## curl https://install.duckdb.org | sh
-import duckdb
+<pre><code>import duckdb
 
 url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
 df = duckdb.sql(f"SELECT * FROM '{url}' ORDER BY datetime DESC LIMIT 1000").df()
@@ -103,7 +102,8 @@ import pandas as pd
 df = pd.read_parquet(url)</code></pre></div>
 
 <div class="snip"><h3>DuckDB</h3>
-<pre><code>SELECT date_trunc('day', datetime) AS day, count(*) AS n
+<pre><code>## curl https://install.duckdb.org | sh
+SELECT date_trunc('day', datetime) AS day, count(*) AS n
 FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet'
 GROUP BY 1 ORDER BY 1 DESC LIMIT 10;</code></pre></div>
 
