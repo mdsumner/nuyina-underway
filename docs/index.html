@@ -92,7 +92,8 @@ tail(d)</code></pre></div>
 d &lt;- arrow::read_parquet(url)</code></pre></div>
 
 <div class="snip"><h3>Python</h3>
-<pre><code>import duckdb
+<pre><code>## curl https://install.duckdb.org | sh
+import duckdb
 
 url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
 df = duckdb.sql(f"SELECT * FROM '{url}' ORDER BY datetime DESC LIMIT 1000").df()
