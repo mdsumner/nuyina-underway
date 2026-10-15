@@ -5,55 +5,122 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nuyina underway</title>
 <style>
-:root { --bg: #f7f6f2; --fg: #1d2b36; --muted: #5b6b77; --card: #ffffff; --line: #d9dde0; --accent: #c8102e; }
+:root { --bg: #f7f6f2; --fg: #1d2b36; --muted: #5b6b77; --card: #ffffff; --line: #d9dde0; --accent: #c8102e; --official: #2f5d7c; --code: #eef0f1; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #10171d; --fg: #e6ecef; --muted: #9aa9b3; --card: #18222a; --line: #2a3742; --accent: #ff5a6e; }
+  :root { --bg: #10171d; --fg: #e6ecef; --muted: #9aa9b3; --card: #18222a; --line: #2a3742; --accent: #ff5a6e; --official: #7fb3d5; --code: #0c1216; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; line-height: 1.5; }
 main { max-width: 52em; margin: 0 auto; padding: 2.5em 1em 3em; }
 h1 { margin: 0 0 0.2em; font-size: 2em; letter-spacing: -0.01em; }
-.lede { color: var(--muted); margin: 0 0 2em; }
+h2.section { margin: 2.2em 0 0.4em; font-size: 1.2em; }
+.lede { color: var(--muted); margin: 0 0 1.5em; }
+.note { color: var(--muted); font-size: 0.92em; margin: 0 0 1em; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15em, 1fr)); gap: 1em; }
 .card { background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 6px; padding: 1em 1.1em; }
-.card h2 { margin: 0 0 0.3em; font-size: 1.1em; }
+.card.official { border-top-color: var(--official); }
+.card.official a { color: var(--official); }
+.card h3 { margin: 0 0 0.3em; font-size: 1.05em; }
 .card p { margin: 0 0 0.6em; color: var(--muted); font-size: 0.95em; }
 .card .src { font-size: 0.85em; }
+.tag { display: inline-block; font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.3em; }
 a { color: var(--accent); }
+.snip { position: relative; margin: 0 0 1em; }
+.snip h3 { margin: 1.2em 0 0.3em; font-size: 1em; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 0.8em 1em; overflow-x: auto; font-size: 0.85em; margin: 0; }
+button.copy { position: absolute; right: 0.5em; bottom: 0.5em; font: inherit; font-size: 0.75em; padding: 0.15em 0.6em; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--fg); cursor: pointer; }
 footer { margin-top: 2.5em; padding-top: 1em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85em; }
 </style>
 </head>
 <body>
 <main>
 <h1>Nuyina underway</h1>
-<p class="lede">Sites and tools built on the RSV Nuyina underway feed: position, met and sea-surface measurements, every minute, from the AAD GeoServer.</p>
+<p class="lede">Raw underway data from RSV Nuyina for data science: position, met and sea-surface measurements every minute,
+cached as Parquet and topped up from the live AAD GeoServer feed. A map to prove it's live, and code to use it.</p>
+<p class="note">This is science-dev work by Michael Sumner, not an official Australian Antarctic Division publication.
+For the official view of the ship, see below.</p>
+
+<h2 class="section">Explore</h2>
 <div class="grid">
 <div class="card">
-<h2><a href="now/">Where's Nuyina now?</a></h2>
-<p>The recent track drawn on a map, straight from the live WFS: 3 hours to 3 days.</p>
-<p class="src"><a href="now/">now/</a></p>
+<h3><a href="now/">Where's Nuyina now?</a></h3>
+<p>The recent track on a map, straight from the live feed: 3 hours to 3 days.</p>
 </div>
 <div class="card">
-<h2><a href="proximal/">Proximal</a></h2>
-<p>Live vessel track with crow-fly lines to a chosen place, and travelled versus geodesic distance.</p>
+<h3><a href="proximal/">Proximal</a></h3>
+<p>Live track with crow-fly lines to a chosen place, and travelled versus geodesic distance.</p>
 <p class="src">from <a href="https://github.com/mdsumner/nuyina-proximal">nuyina-proximal</a> (archived; lives here now)</p>
 </div>
 <div class="card">
-<h2><a href="https://projects.pawsey.org.au/nuyina.map/vessel/nuyina_map.html">Sea ice map</a></h2>
+<h3><a href="https://projects.pawsey.org.au/nuyina.map/vessel/nuyina_map.html">Sea ice map</a></h3>
 <p>The vessel over daily sea ice concentration, rendered to Pawsey object storage.</p>
 <p class="src">built by <a href="https://github.com/mdsumner/seaice.map">seaice.map</a></p>
 </div>
-<div class="card">
-<h2><a href="https://github.com/mdsumner/nuyina.underway">nuyina.underway</a></h2>
-<p>R package to read the underway data up to minutes-recent, from the Parquet cache here plus the live WFS for anything newer.</p>
-<p class="src"><code>nuyina.underway::nuyina_underway()</code></p>
+</div>
+
+<h2 class="section">Official</h2>
+<div class="grid">
+<div class="card official">
+<span class="tag">Australian Antarctic Division</span>
+<h3><a href="https://data.aad.gov.au/nuyina/current">Nuyina dashboard and webcam</a></h3>
+<p>The AAD's own live view of the ship: current position, conditions and the onboard webcam.</p>
 </div>
 </div>
+
+<h2 class="section">Use the data</h2>
+<p class="note">The cache is one Parquet file on a GitHub release, refreshed by GitHub Actions; the live feed is the WFS layer
+<code>underway:nuyina_underway</code>. The R package joins the two, so you get everything up to the last few minutes.</p>
+
+<div class="snip"><h3>R, with nuyina.underway</h3>
+<pre><code>install.packages("remotes")
+remotes::install_github("mdsumner/nuyina.underway")
+
+d &lt;- nuyina.underway::nuyina_underway()   # cache + live, in time order
+tail(d)</code></pre></div>
+
+<div class="snip"><h3>R, just the cache</h3>
+<pre><code>url &lt;- "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
+d &lt;- arrow::read_parquet(url)</code></pre></div>
+
+<div class="snip"><h3>Python</h3>
+<pre><code>import duckdb
+
+url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
+df = duckdb.sql(f"SELECT * FROM '{url}' ORDER BY datetime DESC LIMIT 1000").df()
+
+# or the whole file with pandas
+import pandas as pd
+df = pd.read_parquet(url)</code></pre></div>
+
+<div class="snip"><h3>DuckDB</h3>
+<pre><code>SELECT date_trunc('day', datetime) AS day, count(*) AS n
+FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet'
+GROUP BY 1 ORDER BY 1 DESC LIMIT 10;</code></pre></div>
+
+<div class="snip"><h3>GDAL, the live feed</h3>
+<pre><code># latest 10 records as GeoJSON, straight from the WFS
+ogr2ogr -f GeoJSON /vsistdout/ \
+  "WFS:https://data.aad.gov.au/geoserver/ows" \
+  -sql "SELECT * FROM \"underway:nuyina_underway\" ORDER BY datetime DESC" -limit 10</code></pre></div>
+
 <footer>
-Data: <a href="https://github.com/mdsumner/nuyina-underway/releases/tag/v0.0.1">nuyina_underway.parquet</a>, refreshed by GitHub Actions in
-<a href="https://github.com/mdsumner/nuyina-underway">mdsumner/nuyina-underway</a>, from the
-<a href="https://data.aad.gov.au/geoserver/ows?service=WFS&amp;request=GetCapabilities">AAD GeoServer WFS</a> (layer underway:nuyina_underway).
+Data: <a href="https://github.com/mdsumner/nuyina-underway/releases/tag/v0.0.1">nuyina_underway.parquet</a>, refreshed in
+<a href="https://github.com/mdsumner/nuyina-underway">mdsumner/nuyina-underway</a> from the
+<a href="https://data.aad.gov.au/geoserver/ows?service=WFS&amp;request=GetCapabilities">AAD GeoServer WFS</a>.
+Read package: <a href="https://github.com/mdsumner/nuyina.underway">mdsumner/nuyina.underway</a>.
 </footer>
 </main>
+<script>
+document.querySelectorAll('.snip').forEach(function (s) {
+  var b = document.createElement('button');
+  b.className = 'copy'; b.textContent = 'copy';
+  b.onclick = function () {
+    navigator.clipboard.writeText(s.querySelector('code').innerText).then(function () {
+      b.textContent = 'copied'; setTimeout(function () { b.textContent = 'copy'; }, 1500);
+    });
+  };
+  s.appendChild(b);
+});
+</script>
 </body>
 </html>
