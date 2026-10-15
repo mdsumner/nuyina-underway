@@ -7,14 +7,14 @@ Nuyina underway data pipeline - fetches from AAD WFS geoserver and caches in Par
 The underway data is stored as Parquet at:
 
 ```
-https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet
+https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet
 ```
 
 ### Reading with DuckDB (no dependencies)
 
 ```sql
 -- DuckDB can read directly from URL
-SELECT * FROM 'https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet'
+SELECT * FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet'
 WHERE datetime > '2024-01-01'
 LIMIT 10;
 ```
@@ -25,7 +25,7 @@ LIMIT 10;
 import duckdb
 # or: import pandas as pd; pd.read_parquet(url)
 
-url = "https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet"
+url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
 df = duckdb.sql(f"SELECT * FROM '{url}'").df()
 ```
 
@@ -33,12 +33,12 @@ df = duckdb.sql(f"SELECT * FROM '{url}'").df()
 
 ```r
 # Using arrow
-d <- arrow::read_parquet("https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet")
+d <- arrow::read_parquet("https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet")
 
 # Using duckdb
 library(duckdb)
 con <- dbConnect(duckdb())
-d <- dbGetQuery(con, "SELECT * FROM 'https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet'")
+d <- dbGetQuery(con, "SELECT * FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet'")
 ```
 
 ### Up-to-the-minute data
@@ -48,7 +48,7 @@ The cached parquet is updated every 6 hours. For real-time data, query the WFS d
 ```python
 import duckdb
 
-cache_url = "https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet"
+cache_url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
 wfs_url = "https://data.aad.gov.au/geoserver/underway/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=underway:nuyina_underway&outputFormat=csv"
 
 con = duckdb.connect()
@@ -131,7 +131,7 @@ For an up to the minute update, read the entire stream with
 ``` r
 get_underway <- function(x) {
     ## read the bulk
-    d <- arrow::read_parquet("https://github.com/mdsumner/uwy.new/releases/download/v0.0.1/nuyina_underway.parquet")
+    d <- arrow::read_parquet("https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet")
     ## read the rest
     d1 <- tibble::as_tibble(vapour::vapour_read_fields("WFS:https://data.aad.gov.au/geoserver/ows?service=wfs&version=2.0.0&request=GetCapabilities",
                                                        sql = sprintf("SELECT * FROM \"underway:nuyina_underway\" WHERE datetime > '%s'", 
