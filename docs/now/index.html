@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where's Nuyina now?</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+#map { position: absolute; inset: 0; }
+#info { position: absolute; z-index: 1000; top: 10px; right: 10px; background: #fff; color: #1d2b36;
+        padding: 0.6em 0.8em; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); font-size: 0.9em; max-width: 18em; }
+#info a { color: #c8102e; }
+#info select { font: inherit; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="info">
+  <strong>Where's Nuyina now?</strong><br>
+  Last <select id="n">
+    <option value="180">3 hours</option>
+    <option value="720" selected>12 hours</option>
+    <option value="1440">24 hours</option>
+    <option value="4320">3 days</option>
+  </select> of track
+  <div id="status">loading...</div>
+  <a href="../">all Nuyina sites</a>
+</div>
+<script>
+const map = L.map('map', { worldCopyJump: true }).setView([-50, 147], 3);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+const layer = L.layerGroup().addTo(map);
+const qs = new URLSearchParams(location.search);
+const sel = document.getElementById('n');
+if (qs.get('n')) sel.value = qs.get('n');
+
+function wfsUrl(n) {
+  return 'https://data.aad.gov.au/geoserver/ows?' + new URLSearchParams({
+    service: 'WFS', version: '2.0.0', request: 'GetFeature',
+    typeName: 'underway:nuyina_underway', outputFormat: 'application/json',
+    sortBy: 'datetime D', count: n
+  });
+}
+
+async function load() {
+  const status = document.getElementById('status');
+  status.textContent = 'loading...';
+  layer.clearLayers();
+  try {
+    const url = qs.get('src') || wfsUrl(sel.value);
+    const data = await (await fetch(url)).json();
+    const f = (data.features || []).filter(x => x.geometry);
+    if (!f.length) { status.textContent = 'no data returned'; return; }
+    // oldest first; geometry is MultiPoint [lon, lat]; unwrap across the dateline
+    const pts = f.slice().reverse().map(x => {
+      const c = x.geometry.type === 'Point' ? x.geometry.coordinates : x.geometry.coordinates[0];
+      return [c[1], c[0]];
+    });
+    for (let i = 1; i < pts.length; i++) {
+      while (pts[i][1] - pts[i-1][1] > 180) pts[i][1] -= 360;
+      while (pts[i][1] - pts[i-1][1] < -180) pts[i][1] += 360;
+    }
+    const line = L.polyline(pts, { color: '#c8102e', weight: 3, opacity: 0.8 }).addTo(layer);
+    const last = pts[pts.length - 1];
+    const t = new Date(f[0].properties.datetime);
+    L.circleMarker(last, { radius: 7, color: '#fff', weight: 2, fillColor: '#c8102e', fillOpacity: 1 })
+      .addTo(layer).bindPopup('Nuyina<br>' + t.toUTCString());
+    map.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 10 });
+    const ago = Math.round((Date.now() - t) / 60000);
+    status.innerHTML = 'Latest: ' + last[0].toFixed(3) + ', ' + (((last[1] + 540) % 360) - 180).toFixed(3) +
+      '<br>' + t.toISOString().slice(0, 16).replace('T', ' ') + ' UTC (' +
+      (ago < 120 ? ago + ' min' : Math.round(ago / 60) + ' h') + ' ago)';
+  } catch (e) {
+    status.textContent = 'could not load the feed: ' + e.message;
+  }
+}
+sel.addEventListener('change', load);
+load();
+</script>
+</body>
+</html>
