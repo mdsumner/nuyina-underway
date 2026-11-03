@@ -1,6 +1,7 @@
 # Task: nuyina-underway updater, as-is plus fixes
 
-Status: draft, 2026-11-03. Scope: this repo, the v0.0.1 release as the store,
+Status: implemented in the repo 2026-11-03 (see Progress below); not yet
+enabled or run on the release. Scope: this repo, the v0.0.1 release as the store,
 the existing GitHub Actions. No new hosting.
 
 ## Found
@@ -11,7 +12,7 @@ the existing GitHub Actions. No new hosting.
   `Detect Voyages` is disabled the same way. Commits do not re-enable a
   disabled workflow; only the Actions page or `gh workflow enable` does.
 - Asset after the 2026-11-03 full refetch: 1,671,685 rows, 1-minute cadence,
-  2020-04-11 to 2026-10-19, 108 columns, 177 MB, 26 row groups of 65,536,
+  2021-12-23 to 2026-11-03, 108 columns, 177 MB, 26 row groups of 65,536,
   one geometry column `geom` with GeoParquet metadata. Row groups are not
   time-aligned (row group 0 spans 2020-04 to 2022-02), so
   `WHERE datetime BETWEEN` cannot prune.
@@ -96,3 +97,33 @@ files; the merge step must split new records by year, not assume one.
 
 - The same layout on object storage, where the manifest becomes a listing.
 - envdata extraction reads `nuyina_track.parquet`.
+
+## Progress (2026-11-03, second pass)
+
+- `scripts/build_store.py` (pyarrow + duckdb): `keys`, `merge`, `monolith`.
+  Tested on the 177 MB asset: bootstrap 11.5 s, 5.6 GB peak RSS; incremental
+  merge of a 15-day WFS fetch (21,768 rows, 21,700 overlapping) 4 s, 68 net
+  new rows, totals reconcile with the manifest and the rebuilt monolith.
+  Checks above pass: datetime unique, monthly row groups with monotone
+  min/max, `ogrinfo` sees one `geom` with WGS 84.
+- The record's real range is 2021-12-23 onward. Upstream has 18 records with
+  impossible timestamps (12 in year 0024, 4 in 0025, one 2006, one
+  2020-04-11; mostly at the Hobart berth). Rather than year files for those,
+  anything before 2021 goes to `nuyina_underway_suspect.parquet`, counted in
+  the manifest, excluded from the track and from `latest.json`.
+- `nuyina_track.parquet` is ~43 MB, not ~10: lon/lat/datetime at 1-minute
+  are ~10 MB each. Byte-stream-split/delta encodings only reach 33 MB; left
+  at defaults for reader compatibility. It carries `gml_id` so
+  `detect_voyages.py` runs on it rather than the full-width data.
+- `nuyina_track_hourly.json` keeps the seaice.map name and shape, but like
+  `update_vessel.R` it is every 10 minutes (167k positions, ~16 MB).
+- `update.yaml` rewritten. With no `latest.json` on the release it
+  bootstraps from the monolith (fix 5 happens on the first run). Keepalive is
+  `PUT /actions/workflows/update.yaml/enable` each run (needs
+  `actions: write`) instead of committing `.last-run` every 6 hours; if that
+  turns out not to reset the 60-day clock, fall back to a monthly commit.
+  Uploads use `gh release upload --clobber`; data first, `latest.json` last.
+- `detect-voyages.yaml` removed (step 6). README rewritten (step 7).
+- Not done: steps 1 (enable) and the first run. `update-simple.yaml` still
+  uploads only the monolith; running it now would leave the year files
+  behind until the next routine run, which reconciles from `latest.json`.

@@ -1,99 +1,106 @@
-# uwy.new (Refactored)
+# nuyina-underway
 
-Nuyina underway data pipeline - fetches from AAD WFS geoserver and caches in Parquet.
+Nuyina underway data pipeline: fetches from the AAD GeoServer WFS and caches
+Parquet on this repo's v0.0.1 release, updated every 6 hours.
 
 ## Data Access
 
-The underway data is stored as Parquet at:
+Release base: `https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/`
 
-```
-https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet
-```
+| file | what |
+|---|---|
+| `nuyina_track.parquet` | all positions, 1-minute: gml_id, datetime, longitude, latitude, speed, course, heading (~40 MB). Most readers want this. |
+| `nuyina_underway_YYYY.parquet` | full width (108 columns, GeoParquet `geom`), one file per UTC calendar year, one row group per month. Only the current year is rewritten by routine updates. |
+| `nuyina_underway_suspect.parquet` | the few upstream records dated before 2021 (e.g. year 0024), kept aside. |
+| `nuyina_underway.parquet` | everything in one file; rebuilt **weekly**, so it lags the year files. |
+| `nuyina_track_hourly.json` | positions every 10 minutes, `[{datetime, longitude, latitude}]`. |
+| `voyages.parquet`, `voyages_draft.json` | auto-detected port stops and voyages. |
+| `manifest.json` | URL, row count, min/max datetime of every file (Releases has no listing). |
+| `latest.json` | `{"datetime", "rows", "updated"}`, written last: the store's high-water mark. |
 
-### Reading with DuckDB (no dependencies)
+### DuckDB
 
 ```sql
--- DuckDB can read directly from URL
-SELECT * FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet'
-WHERE datetime > '2024-01-01'
-LIMIT 10;
+SELECT * FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_track.parquet'
+WHERE datetime > '2024-01-01';
+
+-- full width, the years you need
+SELECT * FROM read_parquet([
+  'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway_2025.parquet',
+  'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway_2026.parquet'
+]) WHERE datetime > '2025-12-01';
 ```
 
-### Reading with Python
+### Python, all years via the manifest
 
 ```python
-import duckdb
-# or: import pandas as pd; pd.read_parquet(url)
-
-url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
-df = duckdb.sql(f"SELECT * FROM '{url}'").df()
+import duckdb, json, urllib.request
+base = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1"
+m = json.load(urllib.request.urlopen(f"{base}/manifest.json"))
+urls = [f["url"] for f in m["files"].values()]
+df = duckdb.sql(f"SELECT * FROM read_parquet({urls}, union_by_name = true)").df()
 ```
 
-### Reading with R
+### R
 
 ```r
-# Using arrow
-d <- arrow::read_parquet("https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet")
+base <- "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1"
+track <- arrow::read_parquet(file.path(base, "nuyina_track.parquet"))
 
-# Using duckdb
-library(duckdb)
-con <- dbConnect(duckdb())
-d <- dbGetQuery(con, "SELECT * FROM 'https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet'")
+## full width: arrow reads one URL per call, so loop the manifest
+m <- jsonlite::fromJSON(file.path(base, "manifest.json"))
+d <- dplyr::bind_rows(lapply(m$files, \(f) arrow::read_parquet(f$url)))
 ```
 
 ### Up-to-the-minute data
 
-The cached parquet is updated every 6 hours. For real-time data, query the WFS directly for records newer than your cache:
+Read `latest.json`, then ask the WFS for anything newer:
 
 ```python
+import json, urllib.parse, urllib.request
 import duckdb
-
-cache_url = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet"
-wfs_url = "https://data.aad.gov.au/geoserver/underway/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=underway:nuyina_underway&outputFormat=csv"
-
-con = duckdb.connect()
-
-# Get max datetime from cache
-max_dt = con.sql(f"SELECT MAX(datetime) FROM '{cache_url}'").fetchone()[0]
-
-# Fetch newer records from WFS (add datetime filter)
-# ... combine as needed
+base = "https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1"
+max_dt = json.load(urllib.request.urlopen(f"{base}/latest.json"))["datetime"]
+wfs = ("https://data.aad.gov.au/geoserver/underway/ows?service=WFS&version=2.0.0"
+       "&request=GetFeature&typeName=underway:nuyina_underway&outputFormat=csv"
+       "&cql_filter=" + urllib.parse.quote(f"datetime>'{max_dt}'"))
+recent = duckdb.read_csv(wfs).df()
 ```
 
-## Architecture
+In R, the bulk plus the rest:
 
-### Previous Design (R-based)
-
-- Required R + vapour package
-- Vulnerability: parquet deleted then recreated - if recreation fails, downstream assumes file exists
-
-### New Design (GDAL-native)
-
-- Uses GDAL Docker image directly (no R dependency)
-- Atomic updates: write to temp → validate → rename
-- Incremental updates: only fetch new records
-- Automatic backup and rollback on failure
-
-### Update Flow
-
-```
-1. Download existing parquet from release (if exists)
-2. Query max(datetime) from existing data
-3. Fetch new records from WFS where datetime > max_datetime
-4. If new records exist:
-   a. Backup existing file
-   b. Merge new records with existing
-   c. Validate merged file
-   d. Atomic replace (or rollback to backup on failure)
-5. Upload updated file to release
+``` r
+get_underway <- function(x) {
+    ## read the bulk
+    d <- arrow::read_parquet("https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet")
+    ## read the rest
+    d1 <- tibble::as_tibble(vapour::vapour_read_fields("WFS:https://data.aad.gov.au/geoserver/ows?service=wfs&version=2.0.0&request=GetCapabilities",
+                                                       sql = sprintf("SELECT * FROM \"underway:nuyina_underway\" WHERE datetime > '%s'",
+                                                                     format(max(d$datetime, "%Y-%m-%dT%H:%M:%SZ")))))
+    dplyr::bind_rows(d, d1)
+}
+d <- get_underway()
 ```
 
-### Error Handling
+## Update Flow (`.github/workflows/update.yaml`)
 
-- **No existing data**: Full fetch from WFS
-- **WFS unavailable**: Keep existing data, log error
-- **Merge failure**: Rollback to backup
-- **Validation failure**: Rollback to backup
+```
+1. latest.json + manifest.json from the release (none: bootstrap from the
+   monolith, or a full WFS fetch)
+2. WFS newest record; stop if not newer than latest.json
+3. ogr2ogr -where "datetime > <latest>" -> new_records.parquet   (GDAL: fetch only)
+4. scripts/build_store.py merge: touched year file(s) + new records, one
+   geometry column, dedupe on datetime, sort, monthly row groups; track,
+   10-minute JSON, manifest, latest
+5. scripts/detect_voyages.py on the track
+6. Sundays (or on request): scripts/build_store.py monolith
+7. upload data, then manifest.json, then latest.json
+8. keepalive: re-enable the workflow so GitHub's 60-day inactivity rule
+   never switches the cron off
+```
+
+A failed step stops the job before upload, so the release keeps the last good
+state. Details and rationale: `docs/tasks/updater-improvements.md`.
 
 ## Running Locally
 
@@ -118,35 +125,6 @@ docker run --rm -v "$PWD:/work" -w /work ghcr.io/osgeo/gdal:ubuntu-full-3.9.0 \
 - **Endpoint**: `https://data.aad.gov.au/geoserver/ows`
 - **Layer**: `underway:nuyina_underway`
 - **Service**: WFS 2.0.0
-
-## Schedule
-
-GitHub Actions runs every 6 hours via cron: `0 */6 * * *`
-
-Can also be triggered manually via workflow_dispatch.
-
-
-For an up to the minute update, read the entire stream with
-
-``` r
-get_underway <- function(x) {
-    ## read the bulk
-    d <- arrow::read_parquet("https://github.com/mdsumner/nuyina-underway/releases/download/v0.0.1/nuyina_underway.parquet")
-    ## read the rest
-    d1 <- tibble::as_tibble(vapour::vapour_read_fields("WFS:https://data.aad.gov.au/geoserver/ows?service=wfs&version=2.0.0&request=GetCapabilities",
-                                                       sql = sprintf("SELECT * FROM \"underway:nuyina_underway\" WHERE datetime > '%s'", 
-                                                                     format(max(d$datetime, "%Y-%m-%dT%H:%M:%SZ")))))
-    
-    
-    dplyr::bind_rows(d, d1)
-    
-}
-
-
-
-
-d <- get_underway()
-```
 
 ## Code of Conduct
 
