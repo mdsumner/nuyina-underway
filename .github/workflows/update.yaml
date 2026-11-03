@@ -50,7 +50,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install duckdb pyarrow numpy pytz
+        run: pip install duckdb==2.0.0 pyarrow==26.0.0 numpy pytz
 
       - name: Read high-water mark
         id: state
@@ -63,7 +63,7 @@ jobs:
           elif curl -fsSL -o store/nuyina_underway.parquet "$RELEASE_BASE/nuyina_underway.parquet"; then
             # one-off bootstrap: split the existing monolith into year files
             rm -f store/latest.json store/manifest.json
-            MAX=$(python -c "import duckdb; print(duckdb.sql(\"SELECT strftime(max(datetime) AT TIME ZONE 'UTC', '%Y-%m-%dT%H:%M:%SZ') FROM 'store/nuyina_underway.parquet' WHERE year(datetime) >= 2021\").fetchone()[0])")
+            MAX=$(python -c "import duckdb; print(duckdb.sql(\"SELECT strftime(max(datetime) AT TIME ZONE 'UTC', '%Y-%m-%dT%H:%M:%SZ') FROM 'store/nuyina_underway.parquet' WHERE year(datetime) >= 2021\").fetchall()[0][0])")
             echo "mode=bootstrap" >> $GITHUB_OUTPUT
           else
             MAX=""
