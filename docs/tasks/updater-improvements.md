@@ -1,7 +1,7 @@
 # Task: nuyina-underway updater, as-is plus fixes
 
-Status: implemented in the repo 2026-11-03 (see Progress below); not yet
-enabled or run on the release. Scope: this repo, the v0.0.1 release as the store,
+Status: implemented 2026-11-03 and live on the release since then (see
+Progress and Live below); one check outstanding (keepalive). Scope: this repo, the v0.0.1 release as the store,
 the existing GitHub Actions. No new hosting.
 
 ## Found
@@ -124,6 +124,20 @@ files; the merge step must split new records by year, not assume one.
   turns out not to reset the 60-day clock, fall back to a monthly commit.
   Uploads use `gh release upload --clobber`; data first, `latest.json` last.
 - `detect-voyages.yaml` removed (step 6). README rewritten (step 7).
-- Not done: steps 1 (enable) and the first run. `update-simple.yaml` still
-  uploads only the monolith; running it now would leave the year files
-  behind until the next routine run, which reconciles from `latest.json`.
+- Not done at the time: steps 1 (enable) and the first run.
+
+## Live (checked 2026-11-12)
+
+- Step 1 done: update.yaml enabled; first good run 2026-11-03 02:57Z
+  (workflow_dispatch, 3882500), scheduled 6-hourly since 06:04Z, all
+  successful to date. Step 5 happened on that first run (bootstrap).
+- 2026-11-12: `latest.json` max datetime 2026-11-12T00:05Z, rows 1,684,550.
+  Manifest year files sum to 1,684,532; the 18 difference is the suspect
+  file. Note `latest.json` rows therefore *includes* suspect records,
+  contrary to "excluded from latest.json" above; the datetime does not.
+- `update-simple.yaml` disabled (`gh workflow disable`, file kept): it
+  uploads only the monolith, so a manual run would leave the year files
+  stale until the next routine run reconciled from `latest.json`.
+- Outstanding: whether the per-run `PUT .../enable` keepalive resets the
+  60-day inactivity clock. Last push ~2026-11-03, so check around late
+  December 2026; if the cron is at risk, fall back to a monthly commit.
